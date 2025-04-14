@@ -53,3 +53,33 @@ def get_vector_store(text_chunks, model_name, api_key=None):
 
 #create a conversational chain using langchain
 
+def get_conversationa_chain(model_name, vector_store=None, api_key=None):
+    if model_name == "Google AI":
+        propmt_template = """
+        Answer the question as detailled as possible from the provided context, make sure to provide all details with proper structure, if 
+        the answer is not in the provided context, just say, "answer is not in available in the context", don't provide the wrong answer\n\n
+        Context:\n{context}?\n
+        Question:\n{context}?\n
+        
+        Answer:"""
+
+        model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3, google_api_key=api_key)
+        prompt = PromptTemplate(template=propmt_template, input_variables=['context','questions'])
+        chain=load_qa_chain(model, chain_type="stuff",prompt=prompt)
+        return chain
+    
+#take user input
+
+    def user_input(user_question, model_name, api_key, pdf_docs, conversation_history):
+        if api_key is None or pdf_docs is None:
+            st.warning("Please upload  any pdf and provide api key")
+            return
+        text_chunks = get_text_chunks(get_pdf_etext(pdf_docs), model_name)
+        vector_store = get_vector_store(text_chunks, model_name, api_key)
+        user_question_output=""
+        response_output=""
+
+        if model_name == "Google AI":
+            embeddings = GoogleGenerativeAIEmbeddings(model="model/embedding-001", google_api_key=api_key)
+            new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+            docs = new_db.similarity_search(user_question)
